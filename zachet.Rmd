@@ -1,0 +1,137 @@
+---
+title: "Зачет"
+author: "Магомед Гаратов. 432 группа."
+date: "28 05 2020"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Задача №1
+
+```{r library(Ecdat)}
+library(Ecdat)
+```
+
+```{r fit}
+data(Icecream)
+fit <- lm(cons ~ price + income + temp, data = Icecream)
+summary(fit)
+
+par(mfrow = c(2,2))
+plot(fit)
+```
+
+#### Чтобы построить доверительные и прогнозые интервалы (по умолчанию 95%) для заданных значений регрессоров, их необходимо задать в табличном виде data.frame:
+
+```{r }
+dataIce <- data.frame(Icecream)
+confs <- predict(fit, dataIce, interval = "confidence")
+preds <- predict(fit, dataIce, interval = "prediction")
+plot(cons ~ 1, data = Icecream)
+plot(dataIce)
+
+plot(preds)
+plot(confs)
+
+```
+
+#### Проведем тест на автокорреляцию:
+```{r }
+library(lmtest)
+bgtest(fit, order = 2)
+```
+
+#### Процедура Кохрейна-Оркутта:
+```{r }
+library(orcutt)
+fit_orcutt = cochrane.orcutt(fit, max.iter = 1000)
+fit_orcutt
+coefficients(fit)
+```
+
+#### Проверяем гипотезу о незначительности price:
+
+```{r }
+library(sandwich)
+NeweyWest(fit)
+
+coefficients(fit)
+pt(-1.0444140 / sqrt(0.9230633344), 30-3-1)*2
+```
+
+#### Добавим полученные данные на график:
+
+```{r }
+preds <- predict(fit, dataIce)
+predsOrc <- predict(fit_orcutt, dataIce)
+plot(dataIce$cons)
+points(preds, col = "blue")
+points(predsOrc, col = "red")
+
+```
+
+## Задача №2
+
+```{r library(AER)}
+library(AER)
+```
+
+```{r HousePrices}
+data(HousePrices)
+dataHouse <- data.frame(HousePrices)
+dataHouse$price = log(dataHouse$price)
+dataHouse$lotsize = log(dataHouse$lotsize)
+min.model = lm(price ~ 1, data=HousePrices)
+biggest <- formula(lm(price~.,HousePrices))
+summary(HousePrices)
+```
+
+### Далее строим модели
+#### Акайке:
+
+```{r im_a}
+library(MASS)
+lm_a = stepAIC(min.model, direction = "forward", k=2, scope=biggest, trace = FALSE)
+lm_a
+```
+
+#### Шварц:
+
+```{r im_b}
+lm_b = stepAIC(min.model, direction = "forward", k=log(nrow(HousePrices)), scope=biggest, trace = FALSE)
+lm_b
+```
+
+### Коэффициент детерминации
+#### Акайке:
+
+```{r (lm_a)$r.squared}
+summary(lm_a)$r.squared
+```
+
+#### Шварц:
+
+```{r (lm_b)$r.squared}
+summary(lm_b)$r.squared
+```
+
+### Тест Рамси               
+#### Акайке:
+
+```{r resettest(lm_a)}
+resettest(lm_a)
+```
+
+#### Шварц:
+
+```{r resettest(lm_b)}
+resettest(lm_b)
+```
+
+#### В обоих случаях гипотеза о том, что в модели нет отсутствующих переменных или модель линейная, отвергается.
